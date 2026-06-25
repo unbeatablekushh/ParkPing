@@ -15,6 +15,10 @@ CREATE TABLE IF NOT EXISTS vehicles (
     make TEXT,
     model TEXT,
     color TEXT,
+    purchase_year INTEGER,
+    fuel_type TEXT,
+    chassis_number TEXT,
+    engine_number TEXT,
     rc_image_url TEXT,
     is_verified BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

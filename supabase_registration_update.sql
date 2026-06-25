@@ -3,7 +3,9 @@
 
 ALTER TABLE vehicles 
 ADD COLUMN IF NOT EXISTS purchase_year INTEGER,
-ADD COLUMN IF NOT EXISTS fuel_type TEXT;
+ADD COLUMN IF NOT EXISTS fuel_type TEXT,
+ADD COLUMN IF NOT EXISTS chassis_number TEXT,
+ADD COLUMN IF NOT EXISTS engine_number TEXT;
 
 -- Update types for order identification 
 -- (If not already present from previous steps)
