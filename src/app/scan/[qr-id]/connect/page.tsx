@@ -56,7 +56,7 @@ export default function ConnectPage({ params }: { params: { "qr-id": string } })
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Failed to send alert");
+        alert(data.details ? `DB Error: ${data.details}` : (data.error || "Failed to send alert"));
         setAlertLoading(false);
         return;
       }
@@ -84,6 +84,9 @@ export default function ConnectPage({ params }: { params: { "qr-id": string } })
       const data = await res.json();
       if (res.ok && data.scanId) {
         router.push(`/chat/${data.scanId}?role=scanner`);
+        return;
+      } else {
+        alert(data.details ? `DB Error: ${data.details}` : (data.error || "Unable to start chat. Please try again."));
         return;
       }
     } catch {
