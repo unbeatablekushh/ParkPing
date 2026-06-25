@@ -1,0 +1,9 @@
+
+D:\ParkPing\src\app\dashboard\DashboardContent.tsx
+   8:10  error  'MapPin' is defined but never used        @typescript-eslint/no-unused-vars
+   8:18  error  'Phone' is defined but never used         @typescript-eslint/no-unused-vars
+   8:25  error  'BellRing' is defined but never used      @typescript-eslint/no-unused-vars
+  24:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 4 problems (4 errors, 0 warnings)
+
