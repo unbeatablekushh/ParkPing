@@ -1,97 +1,64 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+export const runtime = 'nodejs'
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const { scanId, content, senderType } = await request.json();
+    const body = await request.json()
+    const { scanId, content, senderType } = body
 
     if (!scanId || !content || !senderType) {
-      return NextResponse.json({ error: "scanId, content, and senderType required" }, { status: 400 });
+      return Response.json({
+        success: false,
+        error: 'Missing required fields'
+      }, { status: 400 })
     }
 
-    if (!["scanner", "owner"].includes(senderType)) {
-      return NextResponse.json({ error: "senderType must be 'scanner' or 'owner'" }, { status: 400 });
-    }
+    const cookieStore = cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+        },
+      }
+    )
 
-    // Insert message
-    const { data: message, error } = await supabase
-      .from("messages")
+    const { data, error } = await supabase
+      .from('messages')
       .insert({
         scan_id: scanId,
+        content: content,
         sender_type: senderType,
-        content,
+        is_read: false
       })
-      .select("id")
-      .single();
+      .select()
+      .single()
 
-    if (error || !message) {
-      return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
+    if (error) {
+      console.error('Message insert error:', error)
+      return Response.json({
+        success: false,
+        error: error.message
+      }, { status: 500 })
     }
 
-    // Try to send FCM notification to the other party
-    try {
-      // Get the scan log to find the vehicle/owner
-      const { data: scanLog } = await supabase
-        .from("scan_logs")
-        .select("qr_id")
-        .eq("id", scanId)
-        .single();
+    return Response.json({
+      success: true,
+      messageId: data.id
+    })
 
-      if (scanLog) {
-        const { data: qrCode } = await supabase
-          .from("qr_codes")
-          .select("vehicle_id")
-          .eq("id", scanLog.qr_id)
-          .single();
-
-        if (qrCode) {
-          const { data: vehicle } = await supabase
-            .from("vehicles")
-            .select("user_id")
-            .eq("id", qrCode.vehicle_id)
-            .single();
-
-          if (vehicle && senderType === "scanner") {
-            // Notify owner
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("fcm_token")
-              .eq("id", vehicle.user_id)
-              .single();
-
-            if (profile?.fcm_token) {
-              const { fcmAdmin } = await import("@/lib/firebase-admin");
-              await fcmAdmin.send({
-                token: profile.fcm_token,
-                notification: {
-                  title: "💬 New message from scanner",
-                  body: content.length > 100 ? content.substring(0, 100) + "..." : content,
-                },
-                data: {
-                  type: "chat_message",
-                  scan_id: scanId,
-                  url: `/dashboard?tab=alerts`,
-                },
-              });
-            }
-          }
-        }
-      }
-    } catch (fcmErr) {
-      console.error("FCM notification for message failed:", fcmErr);
-    }
-
-    return NextResponse.json({ messageId: message.id });
-  } catch (err) {
-    console.error("Messages API error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (error) {
+    console.error('Messages send route error:', error)
+    return Response.json({
+      success: false,
+      error: error instanceof Error
+        ? error.message
+        : 'Unknown error'
+    }, { status: 500 })
   }
 }
